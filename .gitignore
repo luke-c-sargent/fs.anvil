@@ -2,4 +2,3 @@
 __pycache__/
 tests/__pycache__/
 build/
-anvilfs/tests/testconfig.py
