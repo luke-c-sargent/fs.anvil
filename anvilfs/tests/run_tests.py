@@ -4,7 +4,7 @@
 
 from .testconfig import config
 from .unit import run_all as run_all_unit_tests
-from .integration import run_all as run_all_integration_tests
+# from .integration import run_all as run_all_integration_tests
 
 # setup
 if "anvil" not in locals():
@@ -25,9 +25,8 @@ if "anvil" not in locals():
             if segment not in folders:
                 folders.append(segment)
     print("discovered files: \n{}".format(files))
-    print("discovered folders: \n{}".format(folders))
-    exit()
+    print("discovered folders: \n{}\n".format(folders))
 
 if __name__ == "__main__":
     run_all_unit_tests(anvil, files, folders)
-    run_all_integration_tests(anvil, files, folders)
+    # run_all_integration_tests(anvil, files, folders)

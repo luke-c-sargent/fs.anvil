@@ -13,10 +13,26 @@ class WorkspaceBucket(BaseAnVILFolder):
 
     def insert_file(self, bucket_blob):
         # name relative to the path from workspace bucket
-        bucketfile_name = bucket_blob.name
-        idx = bucketfile_name.find('/')
-        if idx < 0: # idx of -1 means char not found
+        path = bucket_blob.name
+        if path[-1] == "/":
+            raise Exception("Files should be set, not folders")
+        s = path.split("/")
+        if len(s) == 1:
             self[WorkspaceBucketFile(bucket_blob)] = None
+        # get to underlying folder
+        base = self
+        for sub in s[:-1]:
+            print("trying " + sub + "/ in base {}".format(base.name))
+            try:
+                base = base[sub+"/"]
+            except KeyError:
+                print("KEYERROR!!!!!!!!!!")
+                baf = BaseAnVILFolder(sub+"/") 
+                print("inserting into {}: \n\t{}".format(base.name, baf.getinfo().raw))
+                base[baf] = {}
+                base = baf
+        # now to insert the final object
+        base[WorkspaceBucketFile(bucket_blob)] = None
 
 
 class WorkspaceBucketFile(BaseAnVILFile):
