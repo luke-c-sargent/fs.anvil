@@ -127,6 +127,7 @@ def test_base_folder_set():
 def test_base_folder_gofp():
     DESC = "BaseAnVILFolder get_object_from_path()"
     baf = BaseAnVILFolder("Place","Holder")
+    # TODO - objects not strings
     baf.filesystem["A"] = {"B": {"C":"D"}}
     fi = baf.get_object_from_path("A/B/C")
     fo = baf.get_object_from_path("A/B/")
@@ -199,10 +200,7 @@ def test_bucket_insert(bucket_name):
 
     wsb.insert_file(FakeBlob())
     wsbf = WorkspaceBucketFile(FakeBlob())
-    print(wsb)
-    print(wsb["afile/"])
-    print(wsb["afile/"]["in/"])
-    fake_insert = wsb["afile/"]["in/"]["the/"]
+    fake_insert = wsb["afile/"]["in/"]["the/"]["bucket.nfo"]
     if fake_insert != wsbf:
         failure(DESC + ": object mismatch")
     else:
@@ -217,9 +215,6 @@ def run_all(anvil, files, folders):
     ns_name = anvil.namespace.name[:-1]
     ws_name = anvil.workspace.name[:-1]
     bucket_name = anvil.workspace.bucket_name
-    print("\n\n\n\n\n")
-    test_bucket_insert(bucket_name)
-    return
     print(" - UNIT TESTING")
     # BaseAnVILResource
     test_base_getinfo()

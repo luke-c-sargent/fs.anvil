@@ -58,15 +58,11 @@ class BaseAnVILFolder(BaseAnVILResource):
 
     # allow dictionary-style access, with possible objs as keys
     def __getitem__(self, key):
+        # maybe this shouldnt allow strings?
         for obj in self.filesystem.keys():
-            if type(obj) == str and obj == key:
-                return self.filesystem[key]
-            else:
-                name = obj.name
-                if name == key:
-                    return self.filesystem[obj]
-        raise KeyError("Key {} not found".format(key))
-
+            if obj.name == key:
+                    return obj
+        raise KeyError("Key '{}' not found".format(key))
 
     def get_object_from_path(self, path):
         # if path represents a folder:

@@ -22,13 +22,10 @@ class WorkspaceBucket(BaseAnVILFolder):
         # get to underlying folder
         base = self
         for sub in s[:-1]:
-            print("trying " + sub + "/ in base {}".format(base.name))
             try:
                 base = base[sub+"/"]
             except KeyError:
-                print("KEYERROR!!!!!!!!!!")
                 baf = BaseAnVILFolder(sub+"/") 
-                print("inserting into {}: \n\t{}".format(base.name, baf.getinfo().raw))
                 base[baf] = {}
                 base = baf
         # now to insert the final object
@@ -37,7 +34,7 @@ class WorkspaceBucket(BaseAnVILFolder):
 
 class WorkspaceBucketFile(BaseAnVILFile):
     def __init__(self, blob):
-        self.name = blob.name
+        self.name = blob.name.split("/")[-1]
         self.size = blob.size
         self.last_modified = blob.updated
         self.blob_handle = blob
