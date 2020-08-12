@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-
-
-
 from .testconfig import config
 from .unit import run_all as run_all_unit_tests
 # from .integration import run_all as run_all_integration_tests
+
 
 # setup
 if "anvil" not in locals():
@@ -16,17 +14,22 @@ if "anvil" not in locals():
     blobs = storage.Client().get_bucket(bucket_name).list_blobs()
     files = []
     folders = []
-    bucketfolder_prefix = "Other Data/Files/"
+    bucketfolder_prefixes = ["Other Data", "Files"]
     for blob in blobs:
-        files.append(bucketfolder_prefix+blob.name)
         split = blob.name.split("/")
-        for i in range(len(split[:-1])):
-            segment = bucketfolder_prefix + "/".join(split[i:-1])
-            if segment not in folders:
-                folders.append(segment)
-    print("discovered files: \n{}".format(files))
-    print("discovered folders: \n{}\n".format(folders))
+        whole_split = bucketfolder_prefixes + split
+        files.append("/".join(whole_split))
+        for i in range(0,len(whole_split[:-1])):
+            segment = whole_split[0:-1*(i+1)]
+            reformed = "/".join(segment) + "/"
+            if reformed not in folders:
+                folders.append(reformed)
+            else:
+                break
+    print("Contents of AnVIL workspace '{}'".format(config["workspace_name"]))
+    print("    discovered files: \n{}".format(files))
+    print("    discovered folders: \n{}\n".format(folders))
 
 if __name__ == "__main__":
-    run_all_unit_tests(anvil, files, folders)
-    # run_all_integration_tests(anvil, files, folders)
+    unit_results, unit_failures = run_all_unit_tests(anvil, files, folders)
+    # integration_results, integration_failures =  run_all_integration_tests(anvil, files, folders)

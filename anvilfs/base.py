@@ -58,29 +58,31 @@ class BaseAnVILFolder(BaseAnVILResource):
 
     # allow dictionary-style access, with possible objs as keys
     def __getitem__(self, key):
-        # maybe this shouldnt allow strings?
         for obj in self.filesystem.keys():
+            if isinstance(obj, BaseAnVILFolder) and key[-1] != "/":
+                key = key + "/"
             if obj.name == key:
-                    return obj
+                return obj
+
         raise KeyError("Key '{}' not found".format(key))
 
     def get_object_from_path(self, path):
         # if path represents a folder:
         if path[-1] == "/":
             split = path[:-1].split("/")
-            for s in split:
-                s = s + "/"
+            for i in range(len(split)):
+                split[i] += "/"
         else:
             split = path.split("/")
-            for s in split[:-1]:
-                s = s + "/"
+            for i in range(len(split[:-1])):
+                split[i] += "/"
         base_obj = self
         for component in split:
             base_obj = base_obj[component]
         return base_obj
     
     def __setitem__(self, key, val):
-        print("setting self[{}] = {}".format(key, val))
+        # print("setting self[{}] = {}".format(key, val))
         self.filesystem[key] = val
 
     def getinfo(self):

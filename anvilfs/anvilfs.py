@@ -12,12 +12,10 @@ class AnVILFS(FS):
         self.rootobj = self.workspace # leaving the option to make namespace root
 
     def getinfo(self, path, namespaces=None):
-        print("afs: getinfo({})".format(path))
-        return self.rootobj.get_info_from_path(path)
+        return self.rootobj.get_object_from_path(path).getinfo()
 
     # Get a list of resource names (str) in a directory.
     def listdir(self, path):
-        print("afs: listdir({})".format(path))
         try:
             maybe_dir = self.rootobj.get_object_from_path(path)
             print("md: {}".format(maybe_dir))
