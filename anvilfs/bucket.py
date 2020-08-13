@@ -1,3 +1,5 @@
+from io import BytesIO
+
 from google.cloud import storage
 
 from .base import BaseAnVILFolder, BaseAnVILFile
@@ -39,3 +41,9 @@ class WorkspaceBucketFile(BaseAnVILFile):
         self.last_modified = blob.updated
         self.blob_handle = blob
         self.is_dir = False
+    
+    def get_bytes_handler(self):
+        buffer = BytesIO()
+        self.blob_handle.download_to_file(buffer)
+        buffer.seek(0)
+        return buffer

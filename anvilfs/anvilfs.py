@@ -1,3 +1,4 @@
+from .base import BaseAnVILFolder
 from .namespace import Namespace
 from .workspace import Workspace
 
@@ -5,10 +6,10 @@ from fs.base import FS
 from fs.errors import DirectoryExpected, ResourceNotFound, FileExpected
 
 class AnVILFS(FS):
-    def __init__(self, namespace_name, workspace_name):
+    def __init__(self, namespace, workspace):
         super(AnVILFS, self).__init__()
-        self.namespace = Namespace(namespace_name)
-        self.workspace = self.namespace.fetch_workspace(workspace_name)
+        self.namespace = Namespace(namespace)
+        self.workspace = self.namespace.fetch_workspace(workspace)
         self.rootobj = self.workspace # leaving the option to make namespace root
 
     def getinfo(self, path, namespaces=None):
@@ -16,26 +17,23 @@ class AnVILFS(FS):
 
     # Get a list of resource names (str) in a directory.
     def listdir(self, path):
+        if path == "/" or path == "":
+            return self.rootobj.key_strings()
         try:
             maybe_dir = self.rootobj.get_object_from_path(path)
-            print("md: {}".format(maybe_dir))
         except KeyError as ke:
             raise ResourceNotFound("Resource {} not found".format(path))
-        if isinstance(maybe_dir, dict) or maybe_dir.is_dir:
-            print("returning dir keys {}".format(maybe_dir.keys()))
-            return list(maybe_dir.keys())
+        if isinstance(maybe_dir, BaseAnVILFolder):
+            return maybe_dir.key_strings()
         else:
             raise DirectoryExpected("{} is not a directory".format(path))
 
     def scandir(self, path):
         if path[-1] != "/":
             path = path + "/"
-        print("afs: scandir({})".format(path))
         result = []
         l = self.listdir(path)
-        print("listdir list: {}".format(l))
         for o in l:
-            print(path+o)
             result.append(self.getinfo(path+o))
         return result
 
@@ -43,7 +41,6 @@ class AnVILFS(FS):
         raise Exception("makedir not implemented")
     
     def openbin(self, path, mode="r", buffering=-1, **options):
-        print("afs: openbin({})".format(path))
         obj = self.rootobj.get_object_from_path(path)
         try:
             return obj.get_bytes_handler()

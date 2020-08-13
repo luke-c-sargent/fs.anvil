@@ -14,6 +14,9 @@ class BaseAnVILResource:
     def __eq__(self, other):
         return self.getinfo().raw == other.getinfo().raw
     
+    def __str__(self):
+        return "<{}: {}>".format(self.__class__.__name__, self.name)
+
     def __ne__(self, other):
         return not(self == other)
 
@@ -37,8 +40,8 @@ class BaseAnVILFile(BaseAnVILResource):
             }
         }
         return Info(result)
-
-    def open_bin(self):
+    
+    def get_bytes_handler(self):
         raise NotImplementedError("Method open_bin() not implemented")
 
 class BaseAnVILFolder(BaseAnVILResource):
@@ -66,7 +69,20 @@ class BaseAnVILFolder(BaseAnVILResource):
 
         raise KeyError("Key '{}' not found".format(key))
 
+    def key_strings(self):
+        def sorter(k):
+            if k[-1] == "/":
+                k = "0"+k
+            return k
+        strings = sorted([k.name for k in self.filesystem], key=sorter)
+        return strings
+
     def get_object_from_path(self, path):
+        if path == "/" or path == "":
+            return self
+        #internally, using google-style no initial slash
+        if path[0] == "/":
+            path = path[1:]
         # if path represents a folder:
         if path[-1] == "/":
             split = path[:-1].split("/")
@@ -82,7 +98,6 @@ class BaseAnVILFolder(BaseAnVILResource):
         return base_obj
     
     def __setitem__(self, key, val):
-        # print("setting self[{}] = {}".format(key, val))
         self.filesystem[key] = val
 
     def getinfo(self):

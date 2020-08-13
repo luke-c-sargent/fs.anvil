@@ -54,11 +54,11 @@ class TestBaseAnVILFile(BaseTest):
         else:
             return BaseTest.failure(DESC)
 
-    def test_bafile_open_bin():
+    def test_bafile_get_bh():
         DESC = "open_bin() is abstract"
         baf = BaseAnVILFile("a", 1)
         try:
-            baf.open_bin()
+            baf.get_bytes_handler()
         except NotImplementedError as e:
             return BaseTest.success(DESC)
         return BaseTest.failure(DESC)

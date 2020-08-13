@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from .testconfig import config
 from .unit import run_all as run_all_unit_tests
 # from .integration import run_all as run_all_integration_tests
