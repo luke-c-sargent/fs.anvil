@@ -41,7 +41,9 @@ class AnVILFS(FS):
         raise Exception("makedir not implemented")
     
     def openbin(self, path, mode="r", buffering=-1, **options):
+        print("Getting {}".format(path))
         obj = self.rootobj.get_object_from_path(path)
+        print(obj)
         try:
             return obj.get_bytes_handler()
         except AttributeError as e:
