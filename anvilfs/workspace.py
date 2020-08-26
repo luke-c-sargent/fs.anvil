@@ -6,6 +6,7 @@ import re
 
 from .base import BaseAnVILFolder, BaseAnVILFile
 from .bucket import WorkspaceBucket
+from .reference import ReferenceDataFile
 
 
 class WorkspaceData(BaseAnVILFile):
@@ -15,6 +16,7 @@ class WorkspaceData(BaseAnVILFile):
         self.last_modified = None
     
     def _dict_to_buffer(self, d):
+        # only keys that match the below regex are valid 
         keys = [k for k in d.keys() if bool(re.match("^[A-Za-z0-9_-]*$", k)) ]
         data = ""
         for k in keys:
@@ -33,6 +35,7 @@ class Workspace(BaseAnVILFolder):
     def __init__(self, namespace_reference,  workspace_name):
         self.namespace = namespace_reference
         resp = self.fetch_api_info(workspace_name)
+        self.bucket_name = resp["workspace"]["bucketName"]
         attributes = resp["workspace"]["attributes"]
         try:
             super().__init__(workspace_name, resp["workspace"]["lastModified"])
@@ -44,7 +47,7 @@ class Workspace(BaseAnVILFolder):
         # ref data folder
         ref_baf = BaseAnVILFolder("Reference Data/")
         self[ref_baf] = None
-        refs = self.ref_extractor(attribs)
+        refs = self.ref_extractor(attributes)
         for source in refs:
             # source, e.g. hg38
             source_baf = BaseAnVILFolder(source+"/")
@@ -69,9 +72,7 @@ class Workspace(BaseAnVILFolder):
                     del workspacedata[datum]
         if workspacedata:
             bucket_baf[WorkspaceData("WorkspaceData.tsv", workspacedata)] = None
-        bucket_baf[WorkspaceBucket(resp["workspace"]["bucketName"])] = None
-        self.bucket_name = resp["workspace"]["bucketName"]
-        # populate reference data
+        bucket_baf[WorkspaceBucket(self.bucket_name)] = None
 
     def ref_extractor(self, attribs):
         # structure:
@@ -84,7 +85,7 @@ class Workspace(BaseAnVILFolder):
             if source not in result:
                 result[source] = {}
             reftype = "_".join(chunked[2:])
-            result[source].extend({
+            result[source].update({
                 reftype: attribs[ref]
             })
         return result
