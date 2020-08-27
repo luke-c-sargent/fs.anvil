@@ -98,8 +98,10 @@ class Workspace(BaseAnVILFolder):
             elif isinstance(val, str):
                 val = [val]
             for v in val:
-                root_result_obj[v] = None # blob placeholder
                 parsed = self.url_parser(v)
+                if not parsed:
+                    continue
+                root_result_obj[v] = None # blob placeholder
                 if parsed["schema"] == "gs":
                     if parsed["bucket"] not in google_buckets:
                         google_buckets[parsed["bucket"]] = []
@@ -108,7 +110,6 @@ class Workspace(BaseAnVILFolder):
                     raise Exception("Other schemas not yet implemented")
         # determine max shared prefix to limit results from api call
         url_to_blob = {}
-        # print(google_buckets)
         for bucket in google_buckets:
             gs_pfx = f"gs://{bucket}/"
             pfxs = [x[len(gs_pfx):] for x in google_buckets[bucket]]
@@ -128,6 +129,9 @@ class Workspace(BaseAnVILFolder):
 
     def url_parser(self, url):
         split = url.split("://", 1)
+        # if this is not a url, ignore
+        if len(split) == 1:
+            return None
         schema = split[0]
         path =  split[1]
         components = path.split("/", 1)
