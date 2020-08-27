@@ -80,7 +80,7 @@ class Workspace(BaseAnVILFolder):
     def ref_extractor(self, attribs):
         # structure:
         # { "source": {
-        #      "reftype": (urlstr, blob) }}
+        #      "reftype": {urlstr, blob} }}
         result = {}
         google_buckets = {}
         for ref in [r for r in attribs if r.startswith("referenceData_")]:
@@ -108,12 +108,11 @@ class Workspace(BaseAnVILFolder):
                     raise Exception("Other schemas not yet implemented")
         # determine max shared prefix to limit results from api call
         url_to_blob = {}
-        print(google_buckets)
+        # print(google_buckets)
         for bucket in google_buckets:
             gs_pfx = f"gs://{bucket}/"
             pfxs = [x[len(gs_pfx):] for x in google_buckets[bucket]]
             prefix = commonprefix(pfxs)
-            print(f"\ncommon prefix of {pfxs}:\n {prefix}")
             blobs = self.storage_client.list_blobs(bucket, prefix=prefix)
             for blob in blobs:
                 url = gs_pfx + blob.name
@@ -125,15 +124,6 @@ class Workspace(BaseAnVILFolder):
                 refs = src_vals[reftype]
                 for url in refs:
                     refs[url] = url_to_blob[url]
-
-        #     chunked = ref.split("_")
-        #     source = chunked[1]
-        #     if source not in result:
-        #         result[source] = {}
-        #     reftype = "_".join(chunked[2:])
-        #     result[source].update({
-        #         reftype: attribs[ref]
-        #     })
         return result
 
     def url_parser(self, url):
