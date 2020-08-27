@@ -5,8 +5,10 @@ from .workspace import Workspace
 from fs.base import FS
 from fs.errors import DirectoryExpected, ResourceNotFound, FileExpected
 
+
 class AnVILFS(FS):
     def __init__(self, namespace, workspace):
+        print(f"!! {self.__class__.__name__}: CREATED")
         super(AnVILFS, self).__init__()
         self.namespace = Namespace(namespace)
         self.workspace = self.namespace.fetch_workspace(workspace)

@@ -1,12 +1,14 @@
-import firecloud.api as fapi
-
 from io import BytesIO
 from os import SEEK_END, SEEK_SET
+from os.path import commonprefix
 import re
+
+from google.cloud import storage
+import firecloud.api as fapi
 
 from .base import BaseAnVILFolder, BaseAnVILFile
 from .bucket import WorkspaceBucket
-from .reference import ReferenceDataFile
+from .reference import ReferenceDataFile, ReferenceDataFolder
 
 
 class WorkspaceData(BaseAnVILFile):
@@ -33,6 +35,7 @@ class WorkspaceData(BaseAnVILFile):
 
 class Workspace(BaseAnVILFolder):
     def __init__(self, namespace_reference,  workspace_name):
+        self.storage_client = storage.Client()
         self.namespace = namespace_reference
         resp = self.fetch_api_info(workspace_name)
         self.bucket_name = resp["workspace"]["bucketName"]
@@ -45,9 +48,9 @@ class Workspace(BaseAnVILFolder):
         bucket_baf = BaseAnVILFolder("Other Data/")
         self[bucket_baf] = None
         # ref data folder
-        ref_baf = BaseAnVILFolder("Reference Data/")
-        self[ref_baf] = None
         refs = self.ref_extractor(attributes)
+        ref_baf = ReferenceDataFolder("Reference Data/", refs)
+        self[ref_baf] = None
         for source in refs:
             # source, e.g. hg38
             source_baf = BaseAnVILFolder(source+"/")
@@ -77,18 +80,75 @@ class Workspace(BaseAnVILFolder):
     def ref_extractor(self, attribs):
         # structure:
         # { "source": {
-        #      "reftype": <files, str or list> }}
+        #      "reftype": (urlstr, blob) }}
         result = {}
+        google_buckets = {}
         for ref in [r for r in attribs if r.startswith("referenceData_")]:
-            chunked = ref.split("_")
-            source = chunked[1]
+            val = attribs[ref]
+            refsplit = ref.split("_", 2) 
+            source = refsplit[1]
+            reftype = refsplit[2]
             if source not in result:
                 result[source] = {}
-            reftype = "_".join(chunked[2:])
-            result[source].update({
-                reftype: attribs[ref]
-            })
+            if reftype not in result[source]:
+                result[source][reftype] = {}
+            root_result_obj = result[source][reftype]
+            if isinstance(val, dict):
+                val = val["items"]
+            elif isinstance(val, str):
+                val = [val]
+            for v in val:
+                root_result_obj[v] = None # blob placeholder
+                parsed = self.url_parser(v)
+                if parsed["schema"] == "gs":
+                    if parsed["bucket"] not in google_buckets:
+                        google_buckets[parsed["bucket"]] = []
+                    google_buckets[parsed["bucket"]].append(v)
+                else:
+                    raise Exception("Other schemas not yet implemented")
+        # determine max shared prefix to limit results from api call
+        url_to_blob = {}
+        print(google_buckets)
+        for bucket in google_buckets:
+            gs_pfx = f"gs://{bucket}/"
+            pfxs = [x[len(gs_pfx):] for x in google_buckets[bucket]]
+            prefix = commonprefix(pfxs)
+            print(f"\ncommon prefix of {pfxs}:\n {prefix}")
+            blobs = self.storage_client.list_blobs(bucket, prefix=prefix)
+            for blob in blobs:
+                url = gs_pfx + blob.name
+                url_to_blob[url] = blob
+        # go back and add blobs to result
+        for source in result:
+            src_vals = result[source]
+            for reftype in src_vals:
+                refs = src_vals[reftype]
+                for url in refs:
+                    refs[url] = url_to_blob[url]
+
+        #     chunked = ref.split("_")
+        #     source = chunked[1]
+        #     if source not in result:
+        #         result[source] = {}
+        #     reftype = "_".join(chunked[2:])
+        #     result[source].update({
+        #         reftype: attribs[ref]
+        #     })
         return result
+
+    def url_parser(self, url):
+        split = url.split("://", 1)
+        schema = split[0]
+        path =  split[1]
+        components = path.split("/", 1)
+        subcomponents = components[1].split("/")
+        return {
+            "schema": schema,
+            "bucket": components[0],
+            "path": components[1],
+            "source": subcomponents[0],
+            "filename": subcomponents[-1]
+        }
 
     def fetch_api_info(self, workspace_name):
         fields = "workspace.attributes,workspace.bucketName,workspace.lastModified"
