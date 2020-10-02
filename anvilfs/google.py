@@ -52,8 +52,6 @@ class DRSAnVILFile(GoogleAnVILFile):
                 "Authorization": f"Bearer {token}"
             }
         )
-        print(f"token: {token} drsurl: {drsurl} txt: {response.text}")
-        print(response)
         result = json.loads(response.text)
         gurl = result["gsUri"]
         super().__init__(gurl)
