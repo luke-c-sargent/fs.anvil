@@ -1,17 +1,17 @@
-import urllib.request
+import requests
 import json
-
 from io import BytesIO
+
+from google.auth import credentials
 
 from .base import BaseAnVILFile
 
 class GoogleAnVILFile(BaseAnVILFile):
-    def __init__(self, url, client):
-        self.client = client
+    def __init__(self, url):
         _split = url[len("gs://"):].split("/")
         self.name = _split[-1]
         filepath = "/".join(_split[1:])
-        blobs = self.client.list_blobs(_split[0], prefix=filepath) 
+        blobs = self.gc_storage_client.list_blobs(_split[0], prefix=filepath) 
         #buck = self.client.get_bucket(_split[0])
         self.blob = None
         self.size = None
@@ -32,15 +32,29 @@ class GoogleAnVILFile(BaseAnVILFile):
         self.blob.download_to_file(buff)
         buff.seek(0)
         return buff
-    
-    @classmethod
-    def drsmaker(self, drsurl, client):
-        api_prefix = "https://dataguids.org/ga4gh/dos/v1/dataobjects/"
-        apistring = api_prefix + drsurl[len("drs://"):]
-        _r = urllib.request.urlopen(apistring)
-        objs = []
-        for _url in json.loads(_r.read().decode('utf-8'))["data_object"]["urls"]:
-            gurl = _url["url"]
-            objs.append(GoogleAnVILFile(gurl, client))
-        return objs
+
+class DRSAnVILFile(GoogleAnVILFile):
+
+    def __init__(self, drsurl):
+        sesh = self.fapi.__getattribute__("__SESSION")
+        if not sesh or not sesh.credentials.valid:
+            self.fapi._set_session()
+        token = self.fapi.__getattribute__("__SESSION").credentials.token
+        #api_prefix = "https://dataguids.org/ga4gh/dos/v1/dataobjects/" <- old news
+        api_url = "https://us-central1-broad-dsde-prod.cloudfunctions.net/martha_v3"
+        #apistring = api_prefix + drsurl[len("drs://"):]
+        response = requests.post(
+            api_url,
+            data = {
+                "url": drsurl
+            },
+            headers = {
+                "Authorization": f"Bearer {token}"
+            }
+        )
+        print(f"token: {token} drsurl: {drsurl} txt: {response.text}")
+        print(response)
+        result = json.loads(response.text)
+        gurl = result["gsUri"]
+        super().__init__(gurl)
 

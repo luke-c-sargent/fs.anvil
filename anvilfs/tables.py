@@ -1,10 +1,8 @@
 from io import BytesIO
 from time import sleep
 
-from google.cloud import bigquery
-
 from .base import BaseAnVILFile, BaseAnVILFolder
-from .google import GoogleAnVILFile
+from .google import GoogleAnVILFile, DRSAnVILFile
 
 class TableEntriesFile(BaseAnVILFile):
     def __init__(self, name, itemsdict):
@@ -26,8 +24,7 @@ class TableEntriesFile(BaseAnVILFile):
 # terra 'entities' represent tables
 # #TODO: refactor to use entity types for lazy load                    
 class TableFolder(BaseAnVILFolder):
-    def __init__(self, etype, eid, attribs, wsref, fapi):
-        self.fapi = fapi
+    def __init__(self, etype, eid, attribs, wsref):
         self.name = etype + "/"
         super().__init__(self.name)
         self.type = etype
@@ -65,7 +62,7 @@ class TableFolder(BaseAnVILFolder):
                         # check if its a linkable file
                         efiletype = self.is_linkable_file(val)
                         if efiletype:
-                            _r = efiletype(val, self.wsref.storage_client)
+                            _r = efiletype(val)
                             if type(_r) == list:
                                 linked_files.extend(_r)
                             else:
@@ -80,7 +77,7 @@ class TableFolder(BaseAnVILFolder):
         protocol = fname.split("://")[0]
         allowed_protocols = {
             "gs": GoogleAnVILFile,
-            "drs": GoogleAnVILFile.drsmaker
+            "drs": DRSAnVILFile
         }
         if protocol in allowed_protocols:
             return allowed_protocols[protocol]
@@ -88,8 +85,8 @@ class TableFolder(BaseAnVILFolder):
             return None
 
         
-    def get_entity_info(self, fapi):
-        resp = fapi.get_entities(
+    def get_entity_info(self):
+        resp = self.fapi.get_entities(
             self.wsref.namespace.name, 
             self.wsref.name,
             self.type)
@@ -100,38 +97,29 @@ class TableFolder(BaseAnVILFolder):
 
 
 class RootTablesFolder(BaseAnVILFolder):
-    def __init__(self, einfo, wsref, fapi):
+    def __init__(self, einfo, wsref):
         self.name = "Tables/"
         super().__init__(self.name)
         for ename in einfo:
             attribs = einfo[ename]["attributeNames"]
             eid = einfo[ename]["idName"]
-            tf = TableFolder(ename, eid, attribs, wsref, fapi)
+            tf = TableFolder(ename, eid, attribs, wsref)
             self[tf.name] = tf
             # change this for laziness
             tf.make_contents()
 
 
 class TableDataCohort(BaseAnVILFile):
-    def lazybqclient(fn):
-        def wrapper(*args, **kwargs):
-            self = args[0]
-            if self.bqclient is None:
-                self.bqclient = bigquery.Client()
-            return fn(*args, **kwargs)
-        return wrapper
 
     def __init__(self, name, attribs):
         query = attribs["query"]
         self.name = name
         self.size = 1 # some placeholder? cant lazy load AND init with total size of results
         self.query = query
-        self.bqclient = None
         self.last_modified = "" # #TODO determine if this is ok
 
-    @lazybqclient
     def get_bytes_handler(self):
-        job = self.bqclient.query(self.query)
+        job = self.gc_bigquery_client.query(self.query)
         r = job.result()
         schema_keys = [e.name for e in r.schema]
         string = '\t'.join(schema_keys)

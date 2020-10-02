@@ -5,8 +5,30 @@ from fs.enums import ResourceType
 from fs.errors import DirectoryExpected, ResourceNotFound, FileExpected
 from fs.info import Info
 
+import firecloud.api as fapi
+from google.cloud import storage
+from google.cloud import bigquery
 
-class BaseAnVILResource:
+
+class ClientRepository:
+
+    _refs = {
+        "fapi": fapi,
+        "gc_storage_client": None,
+        "gc_bigquery_client": None
+    }
+    _ref_inits = {
+        "gc_storage_client": storage.Client,
+        "gc_bigquery_client": bigquery.Client
+    }
+
+    def __getattr__(self, ref):
+        if not self._refs[ref]:
+            self._refs[ref] = self._ref_inits[ref]()
+        return self._refs[ref]
+
+
+class BaseAnVILResource(ClientRepository):
     def getinfo(self):
         raise NotImplementedError("Method getinfo() not implemented")
     

@@ -1,27 +1,30 @@
-from .base import BaseAnVILFolder
+from .base import BaseAnVILFolder, ClientRepository
 from .namespace import Namespace
 from .workspace import Workspace
 from .workloadidentitycredentials import WorkloadIdentityCredentials
 
-import firecloud.api as fapi
 from google.auth.transport.requests import AuthorizedSession
 
 from fs.base import FS
 from fs.errors import DirectoryExpected, ResourceNotFound, FileExpected
 
 
-class AnVILFS(FS):
-    def __init__(self, namespace, workspace):
+class AnVILFS(FS, ClientRepository):
+    DEFAULT_API_URL = "https://api.firecloud.org/api/"
+    #DEV_API_URL="https://firecloud-orchestration.dsde-dev.broadinstitute.org/api/"
+    GalaxyOnAnVIL = False
+    def __init__(self, namespace, workspace, api_url=None, on_anvil=False):
         super(AnVILFS, self).__init__()
-        # hax
-        scopes = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/cloud-platform']
-        credentials = WorkloadIdentityCredentials(scopes=scopes)
-        fapi.__setattr__("__SESSION", AuthorizedSession(credentials))
-        fapi.fcconfig.set_root_url("https://firecloud-orchestration.dsde-dev.broadinstitute.org/api/")
-#        fapi.list_workspaces()
+        if not api_url:
+            api_url = self.DEFAULT_API_URL
+        if on_anvil:
+            scopes = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/cloud-platform']
+            credentials = WorkloadIdentityCredentials(scopes=scopes)
+            self.fapi.__setattr__("__SESSION", AuthorizedSession(credentials))
+            self.fapi.fcconfig.set_root_url(api_url)
         # /hax
         self.namespace = Namespace(namespace)
-        self.workspace = self.namespace.fetch_workspace(workspace, fapi)
+        self.workspace = self.namespace.fetch_workspace(workspace)
         self.rootobj = self.workspace  # leaving the option to make namespace root
 
     def getinfo(self, path, namespaces=None):

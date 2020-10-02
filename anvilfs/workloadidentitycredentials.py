@@ -2,6 +2,7 @@ import datetime
 from google.auth import credentials
 import json
 
+
 class WorkloadIdentityCredentials(credentials.Scoped, credentials.Credentials):
     def __init__(self, scopes):
         super(WorkloadIdentityCredentials, self).__init__()
